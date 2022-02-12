@@ -125,12 +125,12 @@ class RandomRotation(object):
         box_coordinates[:, 3] = torch.max(y_rotated, dim=-1)[0]
 
         horizontal_inside_mask = torch.logical_and(
-            torch.greater_equal(box_coordinates[0], 0),
-            torch.less(box_coordinates[2], self.image_size[0])
+            torch.greater_equal(box_coordinates[:, 0], 0),
+            torch.less(box_coordinates[:, 2], self.image_size[0])
         )
         vertical_inside_mask = torch.logical_and(
-            torch.greater_equal(box_coordinates[1], 0),
-            torch.less(box_coordinates[3], self.image_size[1])
+            torch.greater_equal(box_coordinates[:, 1], 0),
+            torch.less(box_coordinates[:, 3], self.image_size[1])
         )
         inside_mask = torch.logical_and(horizontal_inside_mask, vertical_inside_mask)
 
