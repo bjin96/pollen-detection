@@ -4,11 +4,12 @@ from abc import abstractmethod
 import torch
 from pytorch_lightning import LightningModule
 from pytorch_lightning.utilities.types import STEP_OUTPUT, TRAIN_DATALOADERS, EVAL_DATALOADERS
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torchmetrics.detection import MeanAveragePrecision
 
 from data_loading.load_augsburg15 import Augsburg15DetectionDataset, collate_augsburg15_detection
-from training.transforms import Compose, ToTensor, RandomHorizontalFlip
+from training.transforms import Compose, ToTensor, RandomHorizontalFlip, RandomVerticalFlip, RandomRotation
 
 
 class ObjectDetector(LightningModule):
@@ -17,7 +18,8 @@ class ObjectDetector(LightningModule):
         super().__init__()
         self.num_classes = num_classes
         self.model = self.define_model()
-        self.validation_mean_average_precision = MeanAveragePrecision(compute_on_step=False, class_metrics=True)
+        self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True)
+        self.test_mean_average_precision = MeanAveragePrecision(class_metrics=True)
         self.batch_size = batch_size
 
     @abstractmethod
@@ -68,13 +70,26 @@ class ObjectDetector(LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.0001)
-        return optimizer
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': {
+                'scheduler': ReduceLROnPlateau(optimizer, factor=0.5, patience=4),
+                'monitor': 'map_50',
+                'interval': 'epoch',
+                'frequency': 1
+            }
+        }
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         train_dataset = Augsburg15DetectionDataset(
             root_directory=os.path.join(os.path.dirname(__file__), '../datasets/pollen_only'),
             image_info_csv='pollen15_train_annotations_preprocessed.csv',
-            transforms=Compose([ToTensor(), RandomHorizontalFlip(0.5)])
+            transforms=Compose([
+                ToTensor(),
+                RandomHorizontalFlip(0.5),
+                RandomVerticalFlip(0.5),
+                RandomRotation(0.5, 25, (1280, 960))
+            ])
         )
         return DataLoader(
             train_dataset,
@@ -83,14 +98,9 @@ class ObjectDetector(LightningModule):
             drop_last=True,
             shuffle=True,
             num_workers=4,
-            # sampler=WeightedRandomSampler(
-            #     weights=train_dataset.get_mean_sample_weights(),
-            #     num_samples=100,
-            #     replacement=True
-            # )
         )
 
-    def test_dataloader(self) -> EVAL_DATALOADERS:
+    def val_dataloader(self) -> EVAL_DATALOADERS:
         validation_dataset = Augsburg15DetectionDataset(
             root_directory=os.path.join(os.path.dirname(__file__), '../datasets/pollen_only'),
             image_info_csv='pollen15_val_annotations_preprocessed.csv',
@@ -104,7 +114,7 @@ class ObjectDetector(LightningModule):
             num_workers=4
         )
 
-    def val_dataloader(self) -> EVAL_DATALOADERS:
+    def test_dataloader(self) -> EVAL_DATALOADERS:
         validation_dataset = Augsburg15DetectionDataset(
             root_directory=os.path.join(os.path.dirname(__file__), '../datasets/pollen_only'),
             image_info_csv='pollen15_val_annotations_preprocessed.csv',
