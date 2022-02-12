@@ -26,14 +26,13 @@ class ObjectDetector(LightningModule):
     def define_model(self):
         pass
 
-    def forward(self, x):
-        y = self.model(x)
-        return y
+    def forward(self, x, y=None):
+        return self.model(x, y)
 
     def training_step(self, batch, batch_idx) -> STEP_OUTPUT:
         images, targets = batch
 
-        loss_dict = self.model(images, targets)
+        loss_dict = self(images, targets)
 
         total_loss = sum(loss for loss in loss_dict.values())
         self.log('train_loss', total_loss, on_step=True, batch_size=self.batch_size)
