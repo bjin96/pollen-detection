@@ -43,7 +43,7 @@ class ObjectDetector(LightningModule):
         predictions = self(images, targets)
         self.validation_mean_average_precision(predictions, targets)
 
-    def on_validation_end(self) -> None:
+    def on_validation_epoch_end(self) -> None:
         metrics = self.validation_mean_average_precision.compute()
         self._log_metrics(metrics)
         self.validation_mean_average_precision.reset()
@@ -53,7 +53,7 @@ class ObjectDetector(LightningModule):
         predictions = self(images, targets)
         self.test_mean_average_precision(predictions, targets)
 
-    def on_test_end(self) -> None:
+    def on_test_epoch_end(self) -> None:
         metrics = self.test_mean_average_precision.compute()
         self._log_metrics(metrics)
         self.test_mean_average_precision.reset()
@@ -65,7 +65,8 @@ class ObjectDetector(LightningModule):
             mean_average_precision[f'mar_100_per_class_{index}'] = value
         del mean_average_precision['map_per_class']
         del mean_average_precision['mar_100_per_class']
-        self.logger.log_metrics(mean_average_precision, step=self.global_step)
+        for name, metric in mean_average_precision.items():
+            self.log(name, metric, on_epoch=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.0001)
