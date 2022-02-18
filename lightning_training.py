@@ -16,7 +16,8 @@ if __name__ == '__main__':
     model = ObjectDetector(
         num_classes=Augsburg15DetectionDataset.NUM_CLASSES,
         batch_size=4,
-        timm_model=Network.RESNET_50
+        timm_model=Network.RESNET_50,
+        freeze_backbone=False
     )
     logger = TensorBoardLogger('logs', f'faster_rcnn#{get_git_revision_short_hash()}')
     trainer = Trainer(max_epochs=40, logger=logger)

@@ -18,10 +18,17 @@ from training.transforms import Compose, ToTensor, RandomHorizontalFlip, RandomV
 
 class ObjectDetector(LightningModule):
 
-    def __init__(self, num_classes, batch_size, timm_model: Network):
+    def __init__(
+            self,
+            num_classes: int,
+            batch_size: int,
+            timm_model: Network,
+            freeze_backbone: bool = False
+    ):
         super().__init__()
         self.num_classes = num_classes
         self.timm_model = timm_model
+        self.freeze_backbone = freeze_backbone
         self.model = self.define_model()
         self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True)
         self.test_mean_average_precision = MeanAveragePrecision(class_metrics=True)
@@ -37,26 +44,20 @@ class ObjectDetector(LightningModule):
         out_channels = 256
         in_channels = [i['num_chs'] for i in feature_extractor.feature_info.info]
 
-        # hooks = [
-        #     {'module': 'blocks.5.0'},
-        #     {'module': 'blocks.6.0'}
-        # ]
-        # feature_extractor.feature_hooks = FeatureHooks(hooks, feature_extractor.named_modules())
+        if self.freeze_backbone:
+            # Freeze similarly to pytorch model.
+            for child in list(feature_extractor.children())[:-1]:
+                for p in child.parameters():
+                    p.requires_grad_(False)
 
-        # Freeze similarly to pytorch model.
-        for child in list(feature_extractor.children())[:-1]:
-            for p in child.parameters():
+            for p in list(feature_extractor.children())[-1][:3].parameters():
                 p.requires_grad_(False)
-
-        for p in list(feature_extractor.children())[-1][:3].parameters():
-            p.requires_grad_(False)
 
         backbone = TimmBackboneWithFPN(
             backbone=feature_extractor,
             in_channels_list=in_channels,
             out_channels=out_channels
         )
-        # backbone = TimmBackbone(feature_extractor, feature_extractor.feature_info.info[-1]['num_chs'], out_channels)
 
         anchor_generator = AnchorGenerator(
             sizes=((32, 64, 128, 256, 512),) * (len(out_indices) + 1),
