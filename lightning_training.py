@@ -1,14 +1,23 @@
+import subprocess
+
 from pytorch_lightning import Trainer
+from pytorch_lightning.loggers import TensorBoardLogger
 
 from data_loading.load_augsburg15 import Augsburg15DetectionDataset
-from models.faster_rcnn import PretrainedEfficientNetV2
-from models.pretrained_torchvision_models import PretrainedMobileNet
+from models.object_detector import ObjectDetector
+from models.timm_adapter import Network
+
+
+def get_git_revision_short_hash() -> str:
+    return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
+
 
 if __name__ == '__main__':
-    model = PretrainedEfficientNetV2(
-        Augsburg15DetectionDataset.NUM_CLASSES,
-        batch_size=4
+    model = ObjectDetector(
+        num_classes=Augsburg15DetectionDataset.NUM_CLASSES,
+        batch_size=4,
+        timm_model=Network.RESNET_50
     )
-
-    trainer = Trainer(gpus=1, max_epochs=40)
-    trainer.fit(model, model.train_dataloader(), model.val_dataloader())
+    logger = TensorBoardLogger('logs', f'faster_rcnn#{get_git_revision_short_hash()}')
+    trainer = Trainer(max_epochs=40, logger=logger)
+    trainer.fit(model, train_dataloaders=model.train_dataloader(), val_dataloaders=model.val_dataloader())
