@@ -23,18 +23,34 @@ class ObjectDetector(LightningModule):
             num_classes: int,
             batch_size: int,
             timm_model: Network,
-            freeze_backbone: bool = False
+            min_image_size: int,
+            max_image_size: int,
+            freeze_backbone: bool = False,
     ):
+        """
+        Creates a Faster R-CNN model with a pre-trained backbone from timm
+        (https://github.com/rwightman/pytorch-image-models) and feature pyramid network.
+
+        Args:
+            num_classes: Number of classes to classify objects in the image. Includes an additional background class.
+            batch_size: Size of the batch per training step.
+            timm_model: Identifier for a pre-trained timm backbone.
+            min_image_size: Minimum size to which the image is scaled.
+            max_image_size: Maximum size to which the image is scaled.
+            freeze_backbone: Whether to freeze the backbone for the training.
+        """
         super().__init__()
+        self.save_hyperparameters()
+
         self.num_classes = num_classes
         self.timm_model = timm_model
         self.freeze_backbone = freeze_backbone
-        self.model = self.define_model()
+        self.model = self.define_model(min_image_size, max_image_size)
         self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True)
         self.test_mean_average_precision = MeanAveragePrecision(class_metrics=True)
         self.batch_size = batch_size
 
-    def define_model(self):
+    def define_model(self, min_image_size, max_image_size):
         feature_extractor = timm.create_model(
             self.timm_model.value,
             pretrained=True,
@@ -75,11 +91,8 @@ class ObjectDetector(LightningModule):
             num_classes=self.num_classes,
             rpn_anchor_generator=anchor_generator,
             box_roi_pool=roi_pooler,
-            rpn_pre_nms_top_n_test=150,
-            rpn_post_nms_top_n_test=150,
-            rpn_score_thresh=0.05,
-            min_size=320,
-            max_size=640,
+            min_size=min_image_size,
+            max_size=max_image_size,
         )
 
     def forward(self, x, y=None):

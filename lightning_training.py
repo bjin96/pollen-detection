@@ -17,6 +17,8 @@ if __name__ == '__main__':
         num_classes=Augsburg15DetectionDataset.NUM_CLASSES,
         batch_size=4,
         timm_model=Network.RESNET_50,
+        min_image_size=800,
+        max_image_size=1066,
         freeze_backbone=False
     )
     logger = TensorBoardLogger('logs', f'faster_rcnn#{get_git_revision_short_hash()}')
