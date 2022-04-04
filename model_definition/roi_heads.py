@@ -11,11 +11,11 @@ from torchvision.ops import roi_align
 
 import model_definition._utils as det_utils
 
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict, Tuple, Callable
 
 
-def fastrcnn_loss(class_logits, box_regression, labels, regression_targets):
-    # type: (Tensor, Tensor, List[Tensor], List[Tensor]) -> Tuple[Tensor, Tensor]
+def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, classification_loss_function):
+    # type: (Tensor, Tensor, List[Tensor], List[Tensor], Callable) -> Tuple[Tensor, Tensor]
     """class_logits * one_hot_labels
     Computes the loss for Faster R-CNN.
 
@@ -24,6 +24,7 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets):
         box_regression (Tensor)
         labels (list[BoxList])
         regression_targets (Tensor)
+        classification_loss_function (Callable)
 
     Returns:
         classification_loss (Tensor)
@@ -33,25 +34,7 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets):
     labels = torch.cat(labels, dim=0)
     regression_targets = torch.cat(regression_targets, dim=0)
 
-    # Focal loss start
-    alpha = 0.25
-    gamma = 2.
-
-    epsilon = 10e-5
-
-    one_hot_labels = nn.functional.one_hot(labels, num_classes=16)
-    class_probabilities = nn.functional.softmax(class_logits, dim=-1)
-    p_t = torch.sum(class_probabilities * one_hot_labels, dim=-1) + epsilon
-    focal_loss = -torch.log(p_t) * ((1 - p_t) ** gamma)
-
-    if alpha >= 0:
-        # alpha_t = alpha * one_hot_labels + (1 - alpha) * (1 - one_hot_labels)
-        focal_loss = alpha * focal_loss
-
-    focal_loss = focal_loss.mean()
-    # Focal loss end
-
-    # classification_loss = F.cross_entropy(class_logits, labels)
+    classification_loss = classification_loss_function(class_logits, labels, reduction='mean')
 
     # get indices that correspond to the regression targets for
     # the corresponding ground truth labels, to be used with
@@ -69,8 +52,7 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets):
     )
     box_loss = box_loss / labels.numel()
 
-    # return classification_loss, box_loss
-    return focal_loss, box_loss
+    return classification_loss, box_loss
 
 
 def maskrcnn_inference(x, labels):
@@ -521,6 +503,8 @@ class RoIHeads(nn.Module):
                  score_thresh,
                  nms_thresh,
                  detections_per_img,
+                 # loss
+                 classification_loss_function,
                  # Mask
                  mask_roi_pool=None,
                  mask_head=None,
@@ -531,6 +515,7 @@ class RoIHeads(nn.Module):
                  ):
         super(RoIHeads, self).__init__()
 
+        self.classification_loss_function = classification_loss_function
         self.box_similarity = box_ops.box_iou
         # assign ground-truth boxes for each proposal
         self.proposal_matcher = det_utils.Matcher(
@@ -778,7 +763,7 @@ class RoIHeads(nn.Module):
         if self.training:
             assert labels is not None and regression_targets is not None
             loss_classifier, loss_box_reg = fastrcnn_loss(
-                class_logits, box_regression, labels, regression_targets)
+                class_logits, box_regression, labels, regression_targets, self.classification_loss_function)
             losses = {
                 "loss_classifier": loss_classifier,
                 "loss_box_reg": loss_box_reg

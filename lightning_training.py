@@ -4,7 +4,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from data_loading.load_augsburg15 import Augsburg15DetectionDataset
-from models.object_detector import ObjectDetector
+from models.object_detector import ObjectDetector, ClassificationLoss
 from models.timm_adapter import Network
 
 
@@ -19,7 +19,8 @@ if __name__ == '__main__':
         timm_model=Network.RESNET_50,
         min_image_size=800,
         max_image_size=1066,
-        freeze_backbone=False
+        freeze_backbone=False,
+        classification_loss_function=ClassificationLoss.CROSS_ENTROPY
     )
     logger = TensorBoardLogger('logs', f'faster_rcnn#{get_git_revision_short_hash()}')
     trainer = Trainer(max_epochs=40, logger=logger)
