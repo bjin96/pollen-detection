@@ -123,7 +123,7 @@ class ObjectDetector(LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         metrics = self.validation_mean_average_precision.compute()
-        self._log_metrics(metrics)
+        self._log_metrics(metrics, mode='validation')
         self.validation_mean_average_precision.reset()
 
     def test_step(self, batch, batch_idx):
@@ -133,10 +133,10 @@ class ObjectDetector(LightningModule):
 
     def on_test_epoch_end(self) -> None:
         metrics = self.test_mean_average_precision.compute()
-        self._log_metrics(metrics)
+        self._log_metrics(metrics, mode='test')
         self.test_mean_average_precision.reset()
 
-    def _log_metrics(self, mean_average_precision):
+    def _log_metrics(self, mean_average_precision, mode):
         for index, value in enumerate(mean_average_precision['map_per_class']):
             mean_average_precision[f'map_per_class_{index}'] = value
         for index, value in enumerate(mean_average_precision['mar_100_per_class']):
@@ -144,7 +144,7 @@ class ObjectDetector(LightningModule):
         del mean_average_precision['map_per_class']
         del mean_average_precision['mar_100_per_class']
         for name, metric in mean_average_precision.items():
-            self.log(name, metric, on_epoch=True, prog_bar=True)
+            self.log(f'{mode}_{name}', metric, on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.0001)
@@ -152,7 +152,7 @@ class ObjectDetector(LightningModule):
             'optimizer': optimizer,
             'lr_scheduler': {
                 'scheduler': ReduceLROnPlateau(optimizer, factor=0.5, patience=4),
-                'monitor': 'map_50',
+                'monitor': 'validation_map_50',
                 'interval': 'epoch',
                 'frequency': 1
             }
