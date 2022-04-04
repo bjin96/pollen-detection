@@ -16,7 +16,7 @@ def get_git_revision_short_hash() -> str:
 if __name__ == '__main__':
     model = ObjectDetector(
         num_classes=Augsburg15DetectionDataset.NUM_CLASSES,
-        batch_size=4,
+        batch_size=2,
         timm_model=Network.RESNET_50,
         min_image_size=800,
         max_image_size=1066,
