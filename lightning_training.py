@@ -27,6 +27,11 @@ CLASSIFICATION_LOSS_FUNCTIONS = {
 
 @click.command()
 @click.option(
+    '--experiment_name',
+    help='Experiment name used for identifying the logs and checkpoints.',
+    required=True,
+)
+@click.option(
     '--batch_size',
     default=2,
     help='Batch size for the training.'
@@ -57,6 +62,7 @@ CLASSIFICATION_LOSS_FUNCTIONS = {
     help='Which loss function to use for the classification.'
 )
 def start_experiment(
+        experiment_name: str,
         batch_size: int,
         backbone: str,
         min_image_size: int,
@@ -65,7 +71,7 @@ def start_experiment(
         classification_loss_function: str,
 ):
     print(
-        f'Starting experiment with: batch_size = {batch_size}, backbone = {backbone}, '
+        f'Starting experiment {experiment_name} with: batch_size = {batch_size}, backbone = {backbone}, '
         f'min_image_size = {min_image_size}, max_image_size = {max_image_size}, freeze_backbone = {freeze_backbone}, '
         f'classification_loss_function = {classification_loss_function}'
     )
@@ -83,7 +89,7 @@ def start_experiment(
         classification_loss_function=classification_loss_function
     )
     log_directory = 'logs'
-    experiment_name = f'faster_rcnn#{get_git_revision_short_hash()}'
+    experiment_name = f'{experiment_name}#{get_git_revision_short_hash()}'
     logger = TensorBoardLogger(log_directory, experiment_name)
     checkpoint_callback = ModelCheckpoint(
         dirpath=f'{log_directory}/{experiment_name}',
