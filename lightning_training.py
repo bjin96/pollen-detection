@@ -32,6 +32,11 @@ CLASSIFICATION_LOSS_FUNCTIONS = {
     required=True,
 )
 @click.option(
+    '--checkpoint_path',
+    default=None,
+    help='Path to the checkpoint from which to resume training.',
+)
+@click.option(
     '--batch_size',
     default=2,
     help='Batch size for the training.'
@@ -63,6 +68,7 @@ CLASSIFICATION_LOSS_FUNCTIONS = {
 )
 def start_experiment(
         experiment_name: str,
+        checkpoint_path: str,
         batch_size: int,
         backbone: str,
         min_image_size: int,
@@ -99,7 +105,12 @@ def start_experiment(
         mode='max',
     )
     trainer = Trainer(max_epochs=40, logger=logger, callbacks=[checkpoint_callback], gpus=1, precision=16)
-    trainer.fit(model, train_dataloaders=model.train_dataloader(), val_dataloaders=model.val_dataloader())
+    trainer.fit(
+        model,
+        train_dataloaders=model.train_dataloader(),
+        val_dataloaders=model.val_dataloader(),
+        ckpt_path=checkpoint_path,
+    )
 
 
 if __name__ == '__main__':
