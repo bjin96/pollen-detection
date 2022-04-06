@@ -175,7 +175,7 @@ class ObjectDetector(LightningModule):
             collate_fn=collate_augsburg15_detection,
             drop_last=True,
             shuffle=True,
-            num_workers=4,
+            num_workers=2
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
@@ -189,7 +189,7 @@ class ObjectDetector(LightningModule):
             batch_size=self.batch_size,
             collate_fn=collate_augsburg15_detection,
             drop_last=True,
-            num_workers=4
+            num_workers=2
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
@@ -203,7 +203,7 @@ class ObjectDetector(LightningModule):
             batch_size=self.batch_size,
             collate_fn=collate_augsburg15_detection,
             drop_last=True,
-            num_workers=4
+            num_workers=2
         )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
