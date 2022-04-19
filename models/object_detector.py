@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+from typing import List
 
 import timm
 import torch
@@ -23,6 +24,12 @@ class ClassificationLoss(Enum):
     FOCAL = sigmoid_focal_loss
 
 
+class Augmentation(Enum):
+    VERTICAL_FLIP = 'vertical_flip'
+    HORIZONTAL_FLIP = 'horizontal_flip'
+    ROTATION = 'rotation'
+
+
 class ObjectDetector(LightningModule):
 
     def __init__(
@@ -32,8 +39,9 @@ class ObjectDetector(LightningModule):
             timm_model: Network,
             min_image_size: int,
             max_image_size: int,
+            augmentations: List[Augmentation],
             freeze_backbone: bool = False,
-            classification_loss_function: ClassificationLoss = ClassificationLoss.CROSS_ENTROPY
+            classification_loss_function: ClassificationLoss = ClassificationLoss.CROSS_ENTROPY,
     ):
         """
         Creates a Faster R-CNN model with a pre-trained backbone from timm
@@ -45,13 +53,16 @@ class ObjectDetector(LightningModule):
             timm_model: Identifier for a pre-trained timm backbone.
             min_image_size: Minimum size to which the image is scaled.
             max_image_size: Maximum size to which the image is scaled.
+            augmentations: List of augmentations to applying during training.
             freeze_backbone: Whether to freeze the backbone for the training.
-        """
+            classification_loss_function: Loss function to apply for the classification loss part of the ROI heads.
+            """
         super().__init__()
         self.save_hyperparameters()
 
         self.num_classes = num_classes
         self.timm_model = timm_model
+        self.augmentations = augmentations
         self.freeze_backbone = freeze_backbone
         self.model = self.define_model(min_image_size, max_image_size, classification_loss_function)
         self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True)
@@ -159,15 +170,19 @@ class ObjectDetector(LightningModule):
         }
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
+        transforms_list = [ToTensor()]
+
+        if Augmentation.HORIZONTAL_FLIP in self.augmentations:
+            transforms_list.append(RandomHorizontalFlip(0.5))
+        if Augmentation.VERTICAL_FLIP in self.augmentations:
+            transforms_list.append(RandomVerticalFlip(0.5))
+        if Augmentation.ROTATION in self.augmentations:
+            transforms_list.append(RandomRotation(0.5, 25, (1280, 960)))
+
         train_dataset = Augsburg15DetectionDataset(
             root_directory=os.path.join(os.path.dirname(__file__), '../datasets/pollen_only'),
             image_info_csv='pollen15_train_annotations_preprocessed.csv',
-            transforms=Compose([
-                ToTensor(),
-                RandomHorizontalFlip(0.5),
-                RandomVerticalFlip(0.5),
-                RandomRotation(0.5, 25, (1280, 960))
-            ])
+            transforms=Compose(transforms_list)
         )
         return DataLoader(
             train_dataset,

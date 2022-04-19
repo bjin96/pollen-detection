@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from data_loading.load_augsburg15 import Augsburg15DetectionDataset
-from models.object_detector import ObjectDetector, ClassificationLoss
+from models.object_detector import ObjectDetector, ClassificationLoss, Augmentation
 from models.timm_adapter import Network
 
 
@@ -91,6 +91,7 @@ def start_experiment(
         timm_model=backbone,
         min_image_size=min_image_size,
         max_image_size=max_image_size,
+        augmentations=[Augmentation.VERTICAL_FLIP, Augmentation.HORIZONTAL_FLIP],
         freeze_backbone=freeze_backbone,
         classification_loss_function=classification_loss_function
     )
