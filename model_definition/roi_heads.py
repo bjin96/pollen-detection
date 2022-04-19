@@ -34,7 +34,8 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, clas
     labels = torch.cat(labels, dim=0)
     regression_targets = torch.cat(regression_targets, dim=0)
 
-    classification_loss = classification_loss_function(class_logits, labels, reduction='mean')
+    one_hot_labels = nn.functional.one_hot(labels, num_classes=class_logits.shape[-1])
+    classification_loss = classification_loss_function(class_logits, one_hot_labels, reduction='mean')
 
     # get indices that correspond to the regression targets for
     # the corresponding ground truth labels, to be used with
