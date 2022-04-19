@@ -104,7 +104,7 @@ def start_experiment(
         monitor='validation_map_50',
         mode='max',
     )
-    trainer = Trainer(max_epochs=40, logger=logger, callbacks=[checkpoint_callback], gpus=1, precision=16)
+    trainer = Trainer(max_epochs=40, logger=logger, callbacks=[checkpoint_callback], auto_select_gpus=True, precision=16)
     trainer.fit(
         model,
         train_dataloaders=model.train_dataloader(),
