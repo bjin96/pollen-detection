@@ -6,6 +6,7 @@ import timm
 import torch
 from pytorch_lightning import LightningModule
 from pytorch_lightning.utilities.types import STEP_OUTPUT, TRAIN_DATALOADERS, EVAL_DATALOADERS
+from torch.optim import Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torchmetrics.detection import MeanAveragePrecision
@@ -168,6 +169,9 @@ class ObjectDetector(LightningModule):
                 'frequency': 1
             }
         }
+
+    def optimizer_zero_grad(self, epoch: int, batch_idx: int, optimizer: Optimizer, optimizer_idx: int):
+        optimizer.zero_grad(set_to_none=True)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         transforms_list = [ToTensor()]
