@@ -37,6 +37,7 @@ class ObjectDetector(LightningModule):
             self,
             num_classes: int,
             batch_size: int,
+            learning_rate: float,
             timm_model: Network,
             min_image_size: int,
             max_image_size: int,
@@ -51,6 +52,7 @@ class ObjectDetector(LightningModule):
         Args:
             num_classes: Number of classes to classify objects in the image. Includes an additional background class.
             batch_size: Size of the batch per training step.
+            learning_rate: Learning rate for the optimizer.
             timm_model: Identifier for a pre-trained timm backbone.
             min_image_size: Minimum size to which the image is scaled.
             max_image_size: Maximum size to which the image is scaled.
@@ -69,6 +71,7 @@ class ObjectDetector(LightningModule):
         self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True)
         self.test_mean_average_precision = MeanAveragePrecision(class_metrics=True)
         self.batch_size = batch_size
+        self.learning_rate = learning_rate
 
     def define_model(self, min_image_size, max_image_size, classification_loss_function):
         feature_extractor = timm.create_model(
@@ -159,7 +162,7 @@ class ObjectDetector(LightningModule):
             self.log(f'{mode}_{name}', metric, on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.0001)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         return {
             'optimizer': optimizer,
             'lr_scheduler': {

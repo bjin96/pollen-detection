@@ -88,6 +88,7 @@ def start_experiment(
     model = ObjectDetector(
         num_classes=Augsburg15DetectionDataset.NUM_CLASSES,
         batch_size=1,
+        learning_rate=0.0001,
         timm_model=backbone,
         min_image_size=min_image_size,
         max_image_size=max_image_size,
@@ -111,7 +112,13 @@ def start_experiment(
         callbacks=[checkpoint_callback],
         gpus=1,
         precision=16,
-        accumulate_grad_batches=batch_size
+        accumulate_grad_batches=batch_size,
+        auto_lr_find=True
+    )
+    trainer.tune(
+        model,
+        train_dataloaders=model.train_dataloader(),
+        val_dataloaders=model.val_dataloader(),
     )
     trainer.fit(
         model,
