@@ -82,7 +82,7 @@ class ObjectDetector(LightningModule):
         )
         out_indices = feature_extractor.feature_info.out_indices
         out_channels = 256
-        in_channels = [i['num_chs'] for i in feature_extractor.feature_info.info[:-1]]
+        in_channels = [i['num_chs'] for i in feature_extractor.feature_info.info[1:]]
 
         if self.freeze_backbone:
             # Freeze similarly to pytorch model.
