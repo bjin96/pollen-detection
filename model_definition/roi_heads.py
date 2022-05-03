@@ -34,7 +34,7 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, clas
     labels = torch.cat(labels, dim=0)
     regression_targets = torch.cat(regression_targets, dim=0)
 
-    class_weights = [
+    class_weights = torch.tensor([
         # background class at index 0
         1.,
         7016 / 6028,
@@ -52,7 +52,7 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, clas
         7016 / 109,
         7016 / 216,
         7016 / 1712,
-    ]
+    ])
 
     classification_loss = classification_loss_function(class_logits, labels, reduction='mean', weight=class_weights)
 
