@@ -34,7 +34,27 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, clas
     labels = torch.cat(labels, dim=0)
     regression_targets = torch.cat(regression_targets, dim=0)
 
-    classification_loss = classification_loss_function(class_logits, labels, reduction='mean')
+    class_weights = [
+        # background class at index 0
+        1.,
+        7016 / 6028,
+        7016 / 1465,
+        7016 / 4806,
+        7016 / 7016,
+        7016 / 457,
+        7016 / 282,
+        7016 / 1016,
+        7016 / 2121,
+        7016 / 1208,
+        7016 / 349,
+        7016 / 309,
+        7016 / 3691,
+        7016 / 109,
+        7016 / 216,
+        7016 / 1712,
+    ]
+
+    classification_loss = classification_loss_function(class_logits, labels, reduction='mean', weight=class_weights)
 
     # get indices that correspond to the regression targets for
     # the corresponding ground truth labels, to be used with
