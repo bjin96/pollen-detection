@@ -78,10 +78,11 @@ class ObjectDetector(LightningModule):
             self.timm_model.value,
             pretrained=True,
             features_only=True,
+            out_indices=(1, 2, 3, 4)
         )
         out_indices = feature_extractor.feature_info.out_indices
         out_channels = 256
-        in_channels = [i['num_chs'] for i in feature_extractor.feature_info.info]
+        in_channels = [i['num_chs'] for i in feature_extractor.feature_info.info[:-1]]
 
         if self.freeze_backbone:
             # Freeze similarly to pytorch model.
