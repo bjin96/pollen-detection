@@ -52,7 +52,7 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, clas
         7016 / 109,
         7016 / 216,
         7016 / 1712,
-    ])
+    ], device=labels.device)
 
     classification_loss = classification_loss_function(class_logits, labels, reduction='mean', weight=class_weights)
 
