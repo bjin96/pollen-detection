@@ -112,6 +112,7 @@ def start_experiment(
         callbacks=[checkpoint_callback],
         gpus=1,
         precision=16,
+        progress_bar_refresh_rate=1000,
     )
     trainer.fit(
         model,
