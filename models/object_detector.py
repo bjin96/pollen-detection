@@ -10,10 +10,11 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torchmetrics.detection import MeanAveragePrecision
-from torchvision.ops import MultiScaleRoIAlign, sigmoid_focal_loss
+from torchvision.ops import MultiScaleRoIAlign
 from torch.nn.functional import cross_entropy
 
 from data_loading.load_augsburg15 import Augsburg15DetectionDataset, collate_augsburg15_detection
+from loss.focal_loss import calculate_focal_loss
 from model_definition.anchor_utils import AnchorGenerator
 from model_definition.faster_rcnn import FasterRCNN
 from models.timm_adapter import Network, TimmBackboneWithFPN
@@ -22,7 +23,7 @@ from training.transforms import Compose, ToTensor, RandomHorizontalFlip, RandomV
 
 class ClassificationLoss(Enum):
     CROSS_ENTROPY = cross_entropy
-    FOCAL = sigmoid_focal_loss
+    FOCAL = calculate_focal_loss
 
 
 class Augmentation(Enum):
@@ -44,6 +45,7 @@ class ObjectDetector(LightningModule):
             augmentations: List[Augmentation],
             freeze_backbone: bool = False,
             classification_loss_function: ClassificationLoss = ClassificationLoss.CROSS_ENTROPY,
+            class_weights: List[float] = None,
     ):
         """
         Creates a Faster R-CNN model with a pre-trained backbone from timm
@@ -67,13 +69,13 @@ class ObjectDetector(LightningModule):
         self.timm_model = timm_model
         self.augmentations = augmentations
         self.freeze_backbone = freeze_backbone
-        self.model = self.define_model(min_image_size, max_image_size, classification_loss_function)
+        self.model = self.define_model(min_image_size, max_image_size, classification_loss_function, class_weights)
         self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True)
         self.test_mean_average_precision = MeanAveragePrecision(class_metrics=True)
         self.batch_size = batch_size
         self.learning_rate = learning_rate
 
-    def define_model(self, min_image_size, max_image_size, classification_loss_function):
+    def define_model(self, min_image_size, max_image_size, classification_loss_function, class_weights):
         feature_extractor = timm.create_model(
             self.timm_model.value,
             pretrained=True,
@@ -110,6 +112,8 @@ class ObjectDetector(LightningModule):
             output_size=7,
             sampling_ratio=2
         )
+        if class_weights is not None:
+            class_weights = torch.tensor(class_weights, device=self.device)
         return FasterRCNN(
             backbone,
             num_classes=self.num_classes,
@@ -117,7 +121,8 @@ class ObjectDetector(LightningModule):
             box_roi_pool=roi_pooler,
             min_size=min_image_size,
             max_size=max_image_size,
-            classification_loss_function=classification_loss_function
+            classification_loss_function=classification_loss_function,
+            class_weights=class_weights
         )
 
     def forward(self, x, y=None):

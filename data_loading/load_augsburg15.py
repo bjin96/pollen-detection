@@ -44,7 +44,7 @@ class Augsburg15DetectionDataset(Dataset):
         'Ulmus',
         'Urticaceae'
     ]
-    _CLASS_WEIGHTS = [
+    CLASS_WEIGHTS = [
         # background class at index 0
         1.,
         7016 / 6028,
@@ -97,7 +97,7 @@ class Augsburg15DetectionDataset(Dataset):
     def get_mean_sample_weights(self):
         sample_weights = []
         for class_indices in self.image_info['labels']:
-            mean_weight = np.mean([self._CLASS_WEIGHTS[class_index] for class_index in class_indices])
+            mean_weight = np.mean([self.CLASS_WEIGHTS[class_index] for class_index in class_indices])
             sample_weights.append(mean_weight)
         return sample_weights
 

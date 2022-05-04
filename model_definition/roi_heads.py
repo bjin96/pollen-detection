@@ -14,8 +14,8 @@ import model_definition._utils as det_utils
 from typing import Optional, List, Dict, Tuple, Callable
 
 
-def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, classification_loss_function):
-    # type: (Tensor, Tensor, List[Tensor], List[Tensor], Callable) -> Tuple[Tensor, Tensor]
+def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, classification_loss_function, class_weights):
+    # type: (Tensor, Tensor, List[Tensor], List[Tensor], Callable, Tensor) -> Tuple[Tensor, Tensor]
     """class_logits * one_hot_labels
     Computes the loss for Faster R-CNN.
 
@@ -25,6 +25,7 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, clas
         labels (list[BoxList])
         regression_targets (Tensor)
         classification_loss_function (Callable)
+        class_weights (Tensor)
 
     Returns:
         classification_loss (Tensor)
@@ -33,26 +34,6 @@ def fastrcnn_loss(class_logits, box_regression, labels, regression_targets, clas
 
     labels = torch.cat(labels, dim=0)
     regression_targets = torch.cat(regression_targets, dim=0)
-
-    class_weights = torch.tensor([
-        # background class at index 0
-        1.,
-        7016 / 6028,
-        7016 / 1465,
-        7016 / 4806,
-        7016 / 7016,
-        7016 / 457,
-        7016 / 282,
-        7016 / 1016,
-        7016 / 2121,
-        7016 / 1208,
-        7016 / 349,
-        7016 / 309,
-        7016 / 3691,
-        7016 / 109,
-        7016 / 216,
-        7016 / 1712,
-    ], device=labels.device)
 
     classification_loss = classification_loss_function(class_logits, labels, reduction='mean', weight=class_weights)
 
@@ -525,6 +506,7 @@ class RoIHeads(nn.Module):
                  detections_per_img,
                  # loss
                  classification_loss_function,
+                 class_weights,
                  # Mask
                  mask_roi_pool=None,
                  mask_head=None,
@@ -536,6 +518,7 @@ class RoIHeads(nn.Module):
         super(RoIHeads, self).__init__()
 
         self.classification_loss_function = classification_loss_function
+        self.class_weights = class_weights
         self.box_similarity = box_ops.box_iou
         # assign ground-truth boxes for each proposal
         self.proposal_matcher = det_utils.Matcher(
@@ -783,7 +766,7 @@ class RoIHeads(nn.Module):
         if self.training:
             assert labels is not None and regression_targets is not None
             loss_classifier, loss_box_reg = fastrcnn_loss(
-                class_logits, box_regression, labels, regression_targets, self.classification_loss_function)
+                class_logits, box_regression, labels, regression_targets, self.classification_loss_function, self.class_weights)
             losses = {
                 "loss_classifier": loss_classifier,
                 "loss_box_reg": loss_box_reg

@@ -66,6 +66,11 @@ CLASSIFICATION_LOSS_FUNCTIONS = {
     default='cross_entropy',
     help='Which loss function to use for the classification.'
 )
+@click.option(
+    '--use_weights',
+    default=False,
+    help='Whether to use weights to counteract class imbalance.'
+)
 def start_experiment(
         experiment_name: str,
         checkpoint_path: str,
@@ -75,15 +80,17 @@ def start_experiment(
         max_image_size: int,
         freeze_backbone: bool,
         classification_loss_function: str,
+        use_weights: bool,
 ):
     print(
         f'Starting experiment {experiment_name} with: batch_size = {batch_size}, backbone = {backbone}, '
         f'min_image_size = {min_image_size}, max_image_size = {max_image_size}, freeze_backbone = {freeze_backbone}, '
-        f'classification_loss_function = {classification_loss_function}'
+        f'classification_loss_function = {classification_loss_function}, class_weights = {use_weights}'
     )
 
     backbone = NETWORKS[backbone]
     classification_loss_function = CLASSIFICATION_LOSS_FUNCTIONS[classification_loss_function]
+    class_weights = Augsburg15DetectionDataset.CLASS_WEIGHTS if use_weights else None
 
     model = ObjectDetector(
         num_classes=Augsburg15DetectionDataset.NUM_CLASSES,
@@ -94,7 +101,8 @@ def start_experiment(
         max_image_size=max_image_size,
         augmentations=[Augmentation.VERTICAL_FLIP, Augmentation.HORIZONTAL_FLIP],
         freeze_backbone=freeze_backbone,
-        classification_loss_function=classification_loss_function
+        classification_loss_function=classification_loss_function,
+        class_weights=class_weights
     )
     log_directory = 'logs'
     experiment_name = f'{experiment_name}#{get_git_revision_short_hash()}'
