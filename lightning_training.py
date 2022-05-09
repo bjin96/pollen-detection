@@ -99,7 +99,7 @@ def start_experiment(
         timm_model=backbone,
         min_image_size=min_image_size,
         max_image_size=max_image_size,
-        augmentations=[Augmentation.VERTICAL_FLIP, Augmentation.HORIZONTAL_FLIP],
+        augmentations=[Augmentation.VERTICAL_FLIP, Augmentation.HORIZONTAL_FLIP, Augmentation.ROTATION],
         freeze_backbone=freeze_backbone,
         classification_loss_function=classification_loss_function,
         class_weights=class_weights
