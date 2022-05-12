@@ -30,6 +30,7 @@ class Augmentation(Enum):
     VERTICAL_FLIP = 'vertical_flip'
     HORIZONTAL_FLIP = 'horizontal_flip'
     ROTATION = 'rotation'
+    ROTATION_CUTOFF = 'rotation_cutoff'
 
 
 class ObjectDetector(LightningModule):
@@ -189,8 +190,14 @@ class ObjectDetector(LightningModule):
             transforms_list.append(RandomHorizontalFlip(0.5))
         if Augmentation.VERTICAL_FLIP in self.augmentations:
             transforms_list.append(RandomVerticalFlip(0.5))
+
+        if Augmentation.ROTATION in self.augmentations and Augmentation.ROTATION_CUTOFF in self.augmentations:
+            raise ValueError("Cannot apply rotation and rotation cutoff data augmentation at the same time.")
+
         if Augmentation.ROTATION in self.augmentations:
-            transforms_list.append(RandomRotation(0.5, 25, (1280, 960)))
+            transforms_list.append(RandomRotation(0.5, 25, (1280, 960))),
+        elif Augmentation.ROTATION_CUTOFF in self.augmentations:
+            transforms_list.append(RandomRotation(0.5, 25, (1280, 960), True))
 
         train_dataset = Augsburg15DetectionDataset(
             root_directory=os.path.join(os.path.dirname(__file__), '../datasets/pollen_only'),
