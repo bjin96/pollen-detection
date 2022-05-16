@@ -71,8 +71,8 @@ class ObjectDetector(LightningModule):
         self.augmentations = augmentations
         self.freeze_backbone = freeze_backbone
         self.model = self.define_model(min_image_size, max_image_size, classification_loss_function, class_weights)
-        self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True)
-        self.test_mean_average_precision = MeanAveragePrecision(class_metrics=True)
+        self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True, compute_on_step=False)
+        self.test_mean_average_precision = MeanAveragePrecision(class_metrics=True, compute_on_step=False)
         self.batch_size = batch_size
         self.learning_rate = learning_rate
 
