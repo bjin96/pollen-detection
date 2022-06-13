@@ -18,7 +18,7 @@ from loss.focal_loss import calculate_focal_loss
 from model_definition.anchor_utils import AnchorGenerator
 from model_definition.faster_rcnn import FasterRCNN
 from models.timm_adapter import Network, TimmBackboneWithFPN
-from training.transforms import Compose, ToTensor, RandomHorizontalFlip, RandomVerticalFlip, RandomRotation
+from training.transforms import Compose, ToTensor, RandomHorizontalFlip, RandomVerticalFlip, RandomRotation, RandomCrop
 
 
 class ClassificationLoss(Enum):
@@ -31,6 +31,7 @@ class Augmentation(Enum):
     HORIZONTAL_FLIP = 'horizontal_flip'
     ROTATION = 'rotation'
     ROTATION_CUTOFF = 'rotation_cutoff'
+    CROP = 'crop'
 
 
 class ObjectDetector(LightningModule):
@@ -190,6 +191,8 @@ class ObjectDetector(LightningModule):
             transforms_list.append(RandomHorizontalFlip(0.5))
         if Augmentation.VERTICAL_FLIP in self.augmentations:
             transforms_list.append(RandomVerticalFlip(0.5))
+        if Augmentation.CROP in self.augmentations:
+            transforms_list.append(RandomCrop(0.5))
 
         if Augmentation.ROTATION in self.augmentations and Augmentation.ROTATION_CUTOFF in self.augmentations:
             raise ValueError("Cannot apply rotation and rotation cutoff data augmentation at the same time.")
