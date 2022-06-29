@@ -1,4 +1,3 @@
-import os
 from enum import Enum
 from typing import List
 
@@ -13,12 +12,11 @@ from torchmetrics.detection import MeanAveragePrecision
 from torchvision.ops import MultiScaleRoIAlign
 from torch.nn.functional import cross_entropy
 
-from data_loading.load_augsburg15 import Augsburg15DetectionDataset, collate_augsburg15_detection
+from data_loading.load_augsburg15 import collate_augsburg15_detection, Augsburg15Dataset
 from loss.focal_loss import calculate_focal_loss
 from model_definition.anchor_utils import AnchorGenerator
 from model_definition.faster_rcnn import FasterRCNN
 from models.timm_adapter import Network, TimmBackboneWithFPN
-from training.transforms import Compose, ToTensor, RandomHorizontalFlip, RandomVerticalFlip, RandomRotation, RandomCrop
 
 
 class ClassificationLoss(Enum):
@@ -44,7 +42,9 @@ class ObjectDetector(LightningModule):
             timm_model: Network,
             min_image_size: int,
             max_image_size: int,
-            augmentations: List[Augmentation],
+            train_dataset: Augsburg15Dataset,
+            validation_dataset: Augsburg15Dataset,
+            test_dataset: Augsburg15Dataset,
             freeze_backbone: bool = False,
             classification_loss_function: ClassificationLoss = ClassificationLoss.CROSS_ENTROPY,
             class_weights: List[float] = None,
@@ -60,7 +60,9 @@ class ObjectDetector(LightningModule):
             timm_model: Identifier for a pre-trained timm backbone.
             min_image_size: Minimum size to which the image is scaled.
             max_image_size: Maximum size to which the image is scaled.
-            augmentations: List of augmentations to applying during training.
+            train_dataset: Dataset to use for training.
+            validation_dataset: Dataset to use for validation.
+            test_dataset: Dataset to use for testing.
             freeze_backbone: Whether to freeze the backbone for the training.
             classification_loss_function: Loss function to apply for the classification loss part of the ROI heads.
             """
@@ -69,13 +71,15 @@ class ObjectDetector(LightningModule):
 
         self.num_classes = num_classes
         self.timm_model = timm_model
-        self.augmentations = augmentations
         self.freeze_backbone = freeze_backbone
         self.model = self.define_model(min_image_size, max_image_size, classification_loss_function, class_weights)
         self.validation_mean_average_precision = MeanAveragePrecision(class_metrics=True, compute_on_step=False)
         self.test_mean_average_precision = MeanAveragePrecision(class_metrics=True, compute_on_step=False)
         self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.train_dataset = train_dataset
+        self.validation_dataset = validation_dataset
+        self.test_dataset = test_dataset
 
     def define_model(self, min_image_size, max_image_size, classification_loss_function, class_weights):
         feature_extractor = timm.create_model(
@@ -185,62 +189,27 @@ class ObjectDetector(LightningModule):
         optimizer.zero_grad(set_to_none=True)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        transforms_list = [ToTensor()]
-
-        if Augmentation.HORIZONTAL_FLIP in self.augmentations:
-            transforms_list.append(RandomHorizontalFlip(0.5))
-        if Augmentation.VERTICAL_FLIP in self.augmentations:
-            transforms_list.append(RandomVerticalFlip(0.5))
-        if Augmentation.CROP in self.augmentations:
-            transforms_list.append(RandomCrop(0.5))
-
-        if Augmentation.ROTATION in self.augmentations and Augmentation.ROTATION_CUTOFF in self.augmentations:
-            raise ValueError("Cannot apply rotation and rotation cutoff data augmentation at the same time.")
-
-        if Augmentation.ROTATION in self.augmentations:
-            transforms_list.append(RandomRotation(0.5, 25, (1280, 960))),
-        elif Augmentation.ROTATION_CUTOFF in self.augmentations:
-            transforms_list.append(RandomRotation(0.5, 25, (1280, 960), True))
-
-        train_dataset = Augsburg15DetectionDataset(
-            root_directory=os.path.join(os.path.dirname(__file__), '../datasets/pollen_only'),
-            image_info_csv='pollen15_train_annotations_preprocessed.csv',
-            transforms=Compose(transforms_list)
-        )
         return DataLoader(
-            train_dataset,
+            self.train_dataset,
             batch_size=self.batch_size,
             collate_fn=collate_augsburg15_detection,
-            drop_last=True,
             shuffle=True,
             num_workers=2
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        validation_dataset = Augsburg15DetectionDataset(
-            root_directory=os.path.join(os.path.dirname(__file__), '../datasets/pollen_only'),
-            image_info_csv='pollen15_val_annotations_preprocessed.csv',
-            transforms=ToTensor()
-        )
         return DataLoader(
-            validation_dataset,
+            self.validation_dataset,
             batch_size=self.batch_size,
             collate_fn=collate_augsburg15_detection,
-            drop_last=True,
             num_workers=2
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        validation_dataset = Augsburg15DetectionDataset(
-            root_directory=os.path.join(os.path.dirname(__file__), '../datasets/pollen_only'),
-            image_info_csv='pollen15_test_annotations_preprocessed.csv',
-            transforms=ToTensor()
-        )
         return DataLoader(
-            validation_dataset,
+            self.test_dataset,
             batch_size=self.batch_size,
             collate_fn=collate_augsburg15_detection,
-            drop_last=True,
             num_workers=2
         )
 
