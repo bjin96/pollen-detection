@@ -107,11 +107,23 @@ def run_evaluation_for_experiments(
         evaluation_dataset_group: str
 ):
     if evaluation_dataset_group == 'evaluate_2016augsburg15':
-        evaluation_datasets = ['test_synthesized_2016_augsburg15', 'test_synthesized_manual_set']
+        evaluation_datasets = [
+            'validation_synthesized_2016_augsburg15',
+            'test_synthesized_2016_augsburg15',
+            'test_synthesized_manual_set'
+        ]
     elif evaluation_dataset_group == 'evaluate_2016+2018augsburg15_raw':
-        evaluation_datasets = ['test_raw_2016_2018_augsburg15', 'test_raw_manual_set']
+        evaluation_datasets = [
+            'validation_raw_2016_2018_augsburg15',
+            'test_raw_2016_2018_augsburg15',
+            'test_raw_manual_set'
+        ]
     elif evaluation_dataset_group == 'evaluate_2016+2018augsburg15_synthesised':
-        evaluation_datasets = ['test_synthesized_2016_2018_augsburg15', 'test_synthesized_manual_set']
+        evaluation_datasets = [
+            'validation_synthesized_2016_2018_augsburg15',
+            'test_synthesized_2016_2018_augsburg15',
+            'test_synthesized_manual_set'
+        ]
     else:
         raise ValueError(f'No such evaluation_dataset_group: {evaluation_dataset_group}')
 
