@@ -7,8 +7,8 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from data_loading.load_augsburg15 import Augsburg15Dataset
-from models.object_detector import ObjectDetector, ClassificationLoss, Augmentation
+from data_loading.load_augsburg15 import Augsburg15Dataset, Augmentation
+from models.object_detector import ObjectDetector, ClassificationLoss
 from models.timm_adapter import Network
 
 
@@ -130,8 +130,8 @@ def start_experiment(
     data_augmentations = [augmentations[augmentation] for augmentation in data_augmentation]
 
     train_dataset = Augsburg15Dataset.create_dataset_from_name(train_dataset, data_augmentations)
-    validation_dataset = Augsburg15Dataset.create_dataset_from_name(validation_dataset, data_augmentations)
-    test_dataset = Augsburg15Dataset.create_dataset_from_name(test_dataset, data_augmentations)
+    validation_dataset = Augsburg15Dataset.create_dataset_from_name(validation_dataset, [])
+    test_dataset = Augsburg15Dataset.create_dataset_from_name(test_dataset, [])
 
     model = ObjectDetector(
         num_classes=Augsburg15Dataset.NUM_CLASSES,
